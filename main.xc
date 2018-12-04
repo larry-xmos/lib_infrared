@@ -38,7 +38,10 @@ int main(void)
       ir_demodulate(p_ir_rx, i_ir_pulses);
       ir_protocol(i_ir_pulses, i_ir);
     }
+
     { send_one_test_command(p_ir_tx, 0, 0);
+      send_one_test_command(p_ir_tx, 0x12, 0x34);
+      send_one_test_command(p_ir_tx, 0x56, 0x78);
       _exit(0);
     }
     monitor(i_ir);

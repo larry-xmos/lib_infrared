@@ -22,18 +22,18 @@ enum { SPACE, PULSE };
                                   client interface i_ir_pulses i_ir_pulses)
 {
   int last = SPACE;
-  int start = 0;
+  short start = 0;
 
   while (1) {
     select {
       case p_ir_rx :> unsigned treg @ int end: // 19.06kHz/52.48us
         if (last == SPACE && treg == 0) {
-          i_ir_pulses.pulse(end - start);
+          i_ir_pulses.pulse((short)(end - start));
           last = PULSE;
           start = end;
         }
         else if (last == PULSE && treg != 0) {
-          i_ir_pulses.space(end - start);
+          i_ir_pulses.space((short)(end - start));
           last = SPACE;
           start = end;
         }
