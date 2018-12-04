@@ -1,3 +1,11 @@
+// Copyright (c) 2018, XMOS Ltd, All rights reserved
+//
+// Usage: xsim --vcd-tracing \
+           '-o /tmp/trace.vcd -tile tile[0] -ports -ports-detailed' \
+           --plugin LoopbackPort.dll \
+           '-port tile[0] XS1_PORT_1B 1 0 -port tile[0] XS1_PORT_1A 1 0' \
+           bin/basic.xe
+
 #include <xs1.h>
 #include <stdlib.h>
 #include <syscall.h>

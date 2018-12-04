@@ -1,3 +1,4 @@
+// Copyright (c) 2018, XMOS Ltd, All rights reserved
 #include <xs1.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,8 +43,19 @@ enum { SPACE, PULSE };
   }
 }
 
+// if sampling at 16x carrier frequency, for instance, then n pulses correspond
+// to 16n port time cycles
+//
+// typical pulse burst or space is 20 pulses, so 320 port clock cycles
+// leading pulse burst is 320 pulses, so 5120 port cycles
+// similarly for leading space, which is half of that
+#define LEADING_PULSE 5120
+#define LEADING_SPACE 2560
+#define TYPICAL 320
+
 static int event(int sp, int w, int bytes[4])
 {
+  // TODO represent state with symbols, eg as a C structure
   static enum {
     // header parsing has number 4 at offset 8
     // idle state is also the final state
@@ -90,14 +102,14 @@ static int event(int sp, int w, int bytes[4])
 
   // TODO repeat codes
   if (state == IDLE) {
-    if (sp == PULSE && w >= 5120 - 32 && w <= 5120 + 32)
+    if (sp == PULSE && w >= LEADING_PULSE - 32 && w <= LEADING_PULSE + 32)
       next = P1;
   } else if (state == P1) {
-    if (sp == SPACE && w >= 2560 - 32 && w <= 2560 + 32)
+    if (sp == SPACE && w >= LEADING_SPACE - 32 && w <= LEADING_SPACE + 32)
       next = S1;
   }
   else if (state == S1) {
-    if (sp == PULSE && w >= 320 - 32 && w <= 320 + 32) {
+    if (sp == PULSE && w >= TYPICAL - 32 && w <= TYPICAL + 32) {
       next = PA;
       bitcount = 8;
       byte = 0;
@@ -109,7 +121,7 @@ static int event(int sp, int w, int bytes[4])
         next = state + 2;
         byte = (byte >> 1) | 0x80;
       }
-      else if (w >= 320 - 32 && w <= 320 + 32) {
+      else if (w >= TYPICAL - 32 && w <= TYPICAL + 32) {
         next = state + 1;
         byte = (byte >> 1);
       }
@@ -117,7 +129,7 @@ static int event(int sp, int w, int bytes[4])
   }
   else if ((state >> 2) < 4 && (state & 3) > 0) { // SA0 SA1 SAI0 SAI1
                                                   // SC0 SC1 SCI0 SCI1
-    if (sp == PULSE && w >= 320 - 32 && w <= 320 + 32) {
+    if (sp == PULSE && w >= TYPICAL - 32 && w <= TYPICAL + 32) {
       bitcount--;
       if (bitcount > 0) {
         next = state & 0xC; // current PA PAI PC PCI
@@ -156,6 +168,7 @@ static int event(int sp, int w, int bytes[4])
     select {
       case i_ir_pulses.pulse(int width):
         if (event(1, width, bytes)) {
+          // discard commands where error checking failed on either byte
           if (bytes[0] == (~bytes[1] & 0xFF) && bytes[2] == (~bytes[3] & 0xFF))
             i_ir.command(bytes[0], bytes[2]);
         }
